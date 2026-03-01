@@ -1,0 +1,42 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: nginx-appset
+  namespace: argocd
+spec:
+  generators:
+  - git:
+      repoURL: https://github.com/ChrisX-Devops/gitops-demo.git
+      revision: HEAD
+      directories:
+      - path: apps/nginx/envs/*
+  template:
+    metadata:
+      name: 'nginx-{{path.basename}}'
+      labels:
+        environment: '{{path.basename}}'
+        app: nginx
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/ChrisX-Devops/gitops-demo.git
+        targetRevision: HEAD
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: 'nginx-{{path.basename}}'
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          allowEmpty: false
+        syncOptions:
+        - CreateNamespace=true
+        - PrunePropagationPolicy=foreground
+        - PruneLast=true
+        retry:
+          limit: 5
+          backoff:
+            duration: 5s
+            factor: 2
+            maxDuration: 3m
